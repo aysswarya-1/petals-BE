@@ -1,0 +1,29 @@
+import jwt from 'jsonwebtoken';
+import User from '../models/user.model.js';
+
+export const protect = async (req, res, next) => {
+    try {
+        const header = req.headers.authorization;
+
+        if (!header || !header.startsWith("Bearer"))
+            return res.status(401).json({ message: "No token provided" });
+
+        const token = header.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
+
+        const user = await User.findById(decoded.id);
+        if (!user) return res.status(401).json({ message: "User not found" });
+
+        req.user = user; // now req.user._id exists and is valid
+        next();
+    } catch (error) {
+        return res.status(403).json({ message: "Token expired or invalid" });
+    }
+};
+
+export const isAdmin = (req, res, next) => {
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Admin access only" });
+    }
+    next();
+};
